@@ -121,9 +121,9 @@ typedef long (*orig_t)(int);
     return %orig;
 }
 
-// [FIX] Bọc trong #if để tránh lỗi biên dịch CAFrameRateRange trên iOS 14
+// [FIX] Xóa API_AVAILABLE để Logos không bị lỗi cú pháp
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 150000
-- (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency API_AVAILABLE(ios(15.0)) {
+- (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency {
     if (enabled && customFps > 0) {
         CAFrameRateRange newRange = CAFrameRateRangeMake(customFps, customFps, customFps);
         %orig(newRange, highFrequency);
