@@ -24,8 +24,7 @@ INSTALL_TARGET_PROCESSES = fatego
 
 TWEAK_NAME = Unity60FPS Unity60FPSLoader
 
-# [FIX] Dùng _LIBRARIES = dobby: Theos tự tìm libdobby.a trong $THEOS/lib
-#       và dobby.h trong $THEOS/include (đúng với cách workflow build Dobby)
+# [FIX] XÓA 2 dòng cũ, THAY BẰNG 2 dòng này để Theos tự tìm Dobby trong $THEOS/lib
 Unity60FPS_FILES = Tweak.x
 Unity60FPS_CFLAGS = -fobjc-arc
 Unity60FPS_LIBRARIES = dobby
