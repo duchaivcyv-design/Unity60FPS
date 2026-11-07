@@ -7,18 +7,28 @@
 	<key>CFBundleExecutable</key>
 	<string>unity60fpspref</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.brend0n.unity60fpspref</string>
+	<string>com.taojb.fgotw60fpspref</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<string>1.2.0</string>
 	<key>NSPrincipalClass</key>
 	<string>Unity60FPSRootListController</string>
+	
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>bilibili</string>
+		<string>twitter</string>
+		<string>tweetbot</string>
+		<string>cydia</string>
+		<string>sileo</string>
+		<string>zbra</string>
+	</array>
 </dict>
 </plist>
