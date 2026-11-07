@@ -31,7 +31,8 @@
                                                       error:&error];
     if (!licenses) {
         // [FIX] Không còn im lặng — log lỗi và hiển thị path để debug
-        NSLog(@"[Unity60FPS] Failed to load licenses.txt at %@: %@", path, error);
+        // [REBRAND] Đã đổi tên log sang Unity240FPS
+        NSLog(@"[Unity240FPS] Failed to load licenses.txt at %@: %@", path, error);
         licenses = [NSString stringWithFormat:
                     @"Cannot load licenses.txt\n\nPath:\n%@\n\nError:\n%@",
                     path,
