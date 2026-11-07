@@ -7,26 +7,23 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
-# [FIX] Set THEOS ở cấp workflow để tất cả step đều dùng được
 env:
   THEOS: ${{ github.workspace }}/theos
 
 jobs:
   build-rootless:
     name: Build Rootless Package
-    # [FIX] Pin macos-14 (Apple Silicon, Xcode 15/16) để build arm64e ổn định
-    runs-on: macos-14
+    # ✅ Đã chuyển từ macos-14 sang macos-15 (vẫn là Apple Silicon)
+    runs-on: macos-15
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # [ADD] Cài đủ tool: ldid (sign), dpkg (build .deb), xz (compress), cmake (build Dobby)
     - name: Install Build Dependencies
       run: |
         brew install ldid xz dpkg make cmake
 
-    # [ADD] Clone Theos + tải iOS SDKs (bắt buộc cho arm64e trên iOS 14+)
     - name: Setup Theos with iOS SDKs
       run: |
         git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
@@ -36,14 +33,11 @@ jobs:
         echo "Available SDKs:"
         ls "$THEOS/sdks/"
 
-    # [ADD] Build Dobby cho arm64 + arm64e rồi đặt vào $THEOS/lib và $THEOS/include
-    #       → dòng Unity60FPS_LIBRARIES = dobby trong Makefile sẽ tìm thấy
     - name: Build Dobby (Universal arm64 + arm64e)
       run: |
         git clone --depth 1 https://github.com/jmpews/Dobby.git /tmp/Dobby
         cd /tmp/Dobby
 
-        # --- Build arm64 slice ---
         mkdir build_arm64 && cd build_arm64
         cmake .. \
           -DCMAKE_SYSTEM_NAME=iOS \
@@ -54,7 +48,6 @@ jobs:
         make -j$(sysctl -n hw.ncpu)
         cd ..
 
-        # --- Build arm64e slice ---
         mkdir build_arm64e && cd build_arm64e
         cmake .. \
           -DCMAKE_SYSTEM_NAME=iOS \
@@ -65,7 +58,6 @@ jobs:
         make -j$(sysctl -n hw.ncpu)
         cd ..
 
-        # --- Ghép 2 slice thành universal binary ---
         mkdir -p "$THEOS/lib" "$THEOS/include"
         lipo -create \
           build_arm64/libdobby.a \
@@ -76,7 +68,6 @@ jobs:
         echo "===> Dobby architectures:"
         lipo -info "$THEOS/lib/libdobby.a"
 
-    # [FIX] Bỏ '|| true' → lỗi thật hiện ra ngay; thêm FINALPACKAGE=1 để build release
     - name: Compile and Package (Rootless)
       run: |
         make package FINALPACKAGE=1
