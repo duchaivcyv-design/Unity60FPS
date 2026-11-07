@@ -80,8 +80,9 @@
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), notificationName, NULL, NULL, YES);
     } else {
         // Fallback: đảm bảo tweak reload prefs live
+        // [FIX] Đã đổi sang tên của TaoJB
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
-                                             CFSTR("com.brend0n.unity60fpspref/loadPref"),
+                                             CFSTR("com.taojb.fgotw60fps/loadPref"),
                                              NULL, NULL, YES);
     }
 }
