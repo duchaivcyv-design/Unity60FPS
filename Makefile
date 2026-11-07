@@ -10,7 +10,8 @@ else
 endif
 export THEOS_PACKAGE_SCHEME
 
-TARGET = iphone:clang:latest:7.0
+# [FIX] deployment target 14.0 để build được arm64e
+TARGET = iphone:clang:latest:14.0
 
 # Rootless và roothide đều cần arm64e (A12+), rootful chỉ cần arm64
 ifneq ($(filter rootless roothide,$(THEOS_PACKAGE_SCHEME)),)
@@ -23,14 +24,16 @@ INSTALL_TARGET_PROCESSES = fatego
 
 TWEAK_NAME = Unity60FPS Unity60FPSLoader
 
+# [FIX] báo compiler biết dobby.h ở đâu + link trực tiếp libdobby.a
+#       thay vì dùng _LIBRARIES = dobby (không tự tìm header)
 Unity60FPS_FILES = Tweak.x
-Unity60FPS_CFLAGS = -fobjc-arc
-Unity60FPS_LIBRARIES = dobby
+Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
+Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
 
-ADDITIONAL_CFLAGS += -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -include Prefix.pch
+ADDITIONAL_CFLAGS += -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -include $(THEOS_PROJECT_DIR)/Prefix.pch
 
 SUBPROJECTS += unity60fpspref
 
