@@ -7,9 +7,6 @@ unity60fpspref_FRAMEWORKS = UIKit
 unity60fpspref_PRIVATE_FRAMEWORKS = Preferences
 unity60fpspref_CFLAGS = -fobjc-arc
 
-# [REMOVE] AltList không cần link — code không import header AltList
-# unity60fpspref_EXTRA_FRAMEWORKS += AltList
-
 # [ADD] Copy toàn bộ resource trong Resources/ (Root.plist, icon.png, licenses.txt, ...)
 unity60fpspref_RESOURCE_DIRS = Resources
 
@@ -21,4 +18,4 @@ include $(THEOS_MAKE_PATH)/bundle.mk
 
 internal-stage::
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/PreferenceLoader/Preferences$(ECHO_END)
-	$(ECHO_NOTHING)cp $(THEOS_PROJECT_DIR)/entry.plist $(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/PreferenceLoader/Preferences/unity60fpspref.plist$(ECHO_END)
+	$(ECHO_NOTHING)cp entry.plist $(THEOS_STAGING_DIR)$(THEOS_PACKAGE_INSTALL_PREFIX)/Library/PreferenceLoader/Preferences/unity60fpspref.plist$(ECHO_END)
