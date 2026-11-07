@@ -32,6 +32,9 @@ static BOOL setFPSOnFirstTouch;
 
 static long aslr;
 
+// [ADD] cache FPS đã apply để không set lại khi không đổi (tránh race với Unity thread)
+static int lastAppliedFps = -1;
+
 typedef long (*orig_t)(int);
 #define orig_setTargetFrameRate _logos_orig$unity$setTargetFrameRate
 
@@ -209,6 +212,8 @@ static long find_adrp_str_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
 static long find_ref_to_str(const char *str, long ad_start, long ad_end){
     mach_vm_offset_t address_region_start=ad_start;
     mach_vm_size_t size=0;
+    // [FIX] Lưu first char để skip nhanh — giảm ~10-20x số lần gọi strcmp trên FGO 200MB+
+    const char first = str[0];
     NSLog(@"finding: %s %p",str, str);
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
         // NSLog(@"0x%lx 0x%lx",(long)(address_region_start-aslr),((long)address_region_start+(long)size-aslr));
@@ -216,6 +221,8 @@ static long find_ref_to_str(const char *str, long ad_start, long ad_end){
             if(ad>=ad_end){
                 return false;
             }
+            // [FIX] check first char trước, chỉ gọi strcmp khi khớp
+            if(*(const char*)ad != first) continue;
             if(!strcmp((const char*)(ad),str)) {
                 static int count=0;
                 NSLog(@"candidate %d: 0x%lx",++count,ad-aslr);
@@ -290,20 +297,24 @@ static void buildHook(){
     find_next_header(&ad_end, &size);
 
     long ad_ref=find_ref_to_str("UnityEngine.Application::set_targetFrameRate", ad_start, ad_end);
-    long ad_set_targetFrameRate;
+    long ad_set_targetFrameRate=0;
     if(ad_ref){
         ad_set_targetFrameRate=find_ad_set_targetFrameRate_from_ref(ad_ref);
     }
     else{
         NSLog(@"setter failed");
         ad_ref=find_ref_to_str("UnityEngine.Application::get_targetFrameRate", ad_start, ad_end);
-        if(!ad_ref) {
-            NSLog(@"getter failed");
-            abort();
+        if(ad_ref) {
+            ad_set_targetFrameRate=find_ad_set_targetFrameRate_from_getter_ref(ad_ref);
         }
-        ad_set_targetFrameRate=find_ad_set_targetFrameRate_from_getter_ref(ad_ref);
     }
 
+    // [FIX] Không abort: nếu không tìm thấy, tweak tự disable nhưng GAME VẪN SỐNG.
+    //       Tránh user thấy FGO crash ngay khi mở, tránh anti-cheat flag pattern SIGABRT.
+    if(!ad_set_targetFrameRate) {
+        NSLog(@"[Unity60FPS] Cannot locate setTargetFrameRate — tweak disabled, game continues");
+        return;
+    }
 
     NSLog(@"hook setTargetFrameRate start");
     %init(unity,setTargetFrameRate=(void*)ad_set_targetFrameRate);
@@ -361,12 +372,21 @@ static void loadPref(){
     // [FIX] use loadPrefDict() with fallback
     NSMutableDictionary *prefs = loadPrefDict();
     enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
-    customFps=prefs[@"customFps"]?[prefs[@"customFps"] intValue]:60;
+
+    // [FIX] validate range: user có thể sửa tay file prefs qua Filza thành 0/99999
+    //       → Unity crash hoặc bị anti-cheat flag vì FPS bất thường
+    int fps = prefs[@"customFps"]?[prefs[@"customFps"] intValue]:60;
+    if (fps < 30)  fps = 30;
+    if (fps > 240) fps = 240;
+    customFps = fps;
+
     setFPSOnFirstTouch=prefs[@"setFPSOnFirstTouch"]?[prefs[@"setFPSOnFirstTouch"] boolValue]:YES;
     NSLog(@"customFps: %d",customFps);
 
-    if(orig_setTargetFrameRate) {
+    // [FIX] chỉ apply khi FPS thực sự đổi — tránh set lại mỗi lần user toggle "enabled"
+    if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
         (void)(orig_t)orig_setTargetFrameRate(customFps);
+        lastAppliedFps = customFps;
     }
 }
 static BOOL isEnabledApp(){
@@ -381,8 +401,10 @@ static BOOL isEnabledApp(){
 static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
     loadFrameWork();
     buildHook();
-    if(orig_setTargetFrameRate) {
+    // [FIX] giống loadPref — chỉ apply khi cần, tránh set FPS lần 2 không cần thiết
+    if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
         (void)(orig_t)orig_setTargetFrameRate(customFps);
+        lastAppliedFps = customFps;
     }
 }
 
