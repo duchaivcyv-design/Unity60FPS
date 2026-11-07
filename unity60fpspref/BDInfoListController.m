@@ -142,7 +142,7 @@ extern UIApplication *UIApp;
 
 - (void)open_github {
     // [REBRAND] Trỏ về link Github của bạn
-    [self _openURLString:@"https://github.com/duchaivcyv-design/Unity60FPS"];
+    [self _openURLString:@"https://duchaivcyv-design.github.io"];
 }
 
 - (void)open_alipay {
