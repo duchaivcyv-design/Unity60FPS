@@ -3,7 +3,7 @@ Name: Unity240FPS
 Depends: mobilesubstrate, preferenceloader, com.opa334.altlist, firmware (>= 14.0)
 Version: 1.2.0~1b
 Architecture: iphoneos-arm64
-Description: Ép các game/ứng dụng Unity chạy ở tốc độ khung hình tùy chỉnh (30-240 FPS).
+Description: Tweak ép xung FPS toàn app (30-240 FPS) cho mọi ứng dụng/game (không chỉ riêng Unity). Can thiệp sâu vào tầng IOKit phần cứng, tích hợp lá chắn chống phát hiện (Anti-cheat/Stealth) và hỗ trợ hoàn hảo cho môi trường Rootless & RootHide.
 Maintainer: TaoJB
 Author: TaoJB (fork of brend0n)
 Section: Tweaks
