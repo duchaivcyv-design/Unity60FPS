@@ -1,6 +1,8 @@
 #import <string.h>
 #import <dlfcn.h>
 #import <crt_externs.h>
+#import <TargetConditionals.h>
+#import <rootless.h>
 
 %ctor{
     // credits to https://github.com/opa334/Choicy/blob/master/Tweak.x#L38
@@ -17,6 +19,7 @@
     #if TARGET_OS_SIMULATOR
     dlopen("/opt/simject/Unity60FPS.dylib",RTLD_NOW);
     #else
-    dlopen(THEOS_PACKAGE_INSTALL_PREFIX"/Library/MobileSubstrate/DynamicLibraries/Unity60FPS.dylib",RTLD_NOW);
+    // [FIX] ROOT_PATH resolves correctly for rootful / rootless / roothide
+    dlopen(ROOT_PATH("/Library/MobileSubstrate/DynamicLibraries/Unity60FPS.dylib"),RTLD_NOW);
     #endif
 }
