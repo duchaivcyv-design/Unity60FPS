@@ -10,7 +10,7 @@
             <key>label</key>
             <string></string>
             <key>footerText</key>
-            <string>WARNING</string>
+            <string>CẢNH BÁO: Tweak can thiệp sâu vào IOKit &amp; Core Animation. Hãy tự chịu rủi ro khi sử dụng! Máy có thể nóng lên và tụt pin nhanh hơn.</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -22,7 +22,7 @@
             <key>key</key>
             <string>enabled</string>
             <key>label</key>
-            <string>ENABLED</string>
+            <string>Bật Tweak</string>
             <key>PostNotification</key>
             <string>com.taojb.fgotw60fps/loadPref</string>
         </dict>
@@ -32,7 +32,7 @@
             <key>defaults</key>
             <string>com.taojb.fgotw60fps</string>
             <key>label</key>
-            <string>CHOOSE_ENABLED_APP</string>
+            <string>Chọn Ứng Dụng / Game Bật</string>
             <key>detail</key>
             <string>ATLApplicationListMultiSelectionController</string>
             <key>key</key>
@@ -62,7 +62,7 @@
             <key>label</key>
             <string></string>
             <key>footerText</key>
-            <string>DESCRIPTION</string>
+            <string>1. Ép FPS tùy chỉnh (30-240) cho toàn bộ ứng dụng đã chọn, không chỉ riêng game Unity.&#10;2. FPS tối đa thực tế phụ thuộc vào tần số quét màn hình của bạn (60Hz, 90Hz, 120Hz).&#10;3. Mức FPS đã được giới hạn an toàn để tránh crash game.&#10;4. Nếu game giật lag hoặc máy quá nóng, hãy giảm mức FPS xuống.</string>
         </dict>
 
         <dict>
@@ -73,7 +73,7 @@
             <key>key</key>
             <string>customFps</string>
             <key>label</key>
-            <string>CUSTOM_FPS</string>
+            <string>Giới Hạn FPS</string>
             <key>detail</key>
             <string>PSListItemsController</string>
             <key>default</key>
