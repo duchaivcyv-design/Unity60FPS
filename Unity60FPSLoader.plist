@@ -1,7 +1,11 @@
 {
 	Filter = {
 		Bundles = (
-			"com.apple.Foundation",
+			"com.aniplex.fategrandorder",
+			"com.aniplex.fategrandorder.en",
+			"com.aniplex.fategrandorder.kr",
+			"com.aniplex.fategrandorder.tw",
+            "com.apple.Foundation",
 		);
 	};
 }
