@@ -22,36 +22,7 @@
             <key>key</key>
             <string>enabled</string>
             <key>label</key>
-            <string>Bật Tweak</string>
-            <key>PostNotification</key>
-            <string>com.taojb.fgotw60fps/loadPref</string>
-        </dict>
-        <dict>
-            <key>cell</key>
-            <string>PSLinkListCell</string>
-            <key>defaults</key>
-            <string>com.taojb.fgotw60fps</string>
-            <key>label</key>
-            <string>Chọn Ứng Dụng / Game Bật</string>
-            <key>detail</key>
-            <string>ATLApplicationListMultiSelectionController</string>
-            <key>key</key>
-            <string>apps</string>
-            <key>sections</key>
-            <array>
-                <dict>
-                    <key>sectionType</key>
-                    <string>Visible</string>
-                </dict>
-            </array>
-            <key>showIdentifiersAsSubtitle</key>
-            <true/>
-            <key>defaultApplicationSwitchValue</key>
-            <false/>
-            <key>useSearchBar</key>
-            <true/>
-            <key>includeIdentifiersInSearch</key>
-            <true/>
+            <string>Bật Tweak (Toàn Cầu)</string>
             <key>PostNotification</key>
             <string>com.taojb.fgotw60fps/loadPref</string>
         </dict>
@@ -62,7 +33,7 @@
             <key>label</key>
             <string></string>
             <key>footerText</key>
-            <string>1. Ép FPS tùy chỉnh (30-240) cho toàn bộ ứng dụng đã chọn, không chỉ riêng game Unity.&#10;2. FPS tối đa thực tế phụ thuộc vào tần số quét màn hình của bạn (60Hz, 90Hz, 120Hz).&#10;3. Mức FPS đã được giới hạn an toàn để tránh crash game.&#10;4. Nếu game giật lag hoặc máy quá nóng, hãy giảm mức FPS xuống.</string>
+            <string>1. Ép FPS tùy chỉnh (30-240) cho TOÀN BỘ ứng dụng và game (Không cần chọn app).&#10;2. FPS tối đa thực tế phụ thuộc vào tần số quét màn hình của bạn (60Hz, 90Hz, 120Hz).&#10;3. Mức FPS đã được giới hạn an toàn để tránh crash game.&#10;4. Nếu game giật lag hoặc máy quá nóng, hãy giảm mức FPS xuống.</string>
         </dict>
 
         <dict>
