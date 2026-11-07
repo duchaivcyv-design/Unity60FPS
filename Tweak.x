@@ -110,20 +110,32 @@ static inline bool is_32_imm_str(uint32_t ins){
 }
 // helper function
 
+// [FIX] Guard against mach_vm_region failure + memory leak (mach_vm_read buffer never freed)
 static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, mach_vm_size_t *size_p){
     vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
-    mach_port_t object_name;
-    kern_return_t ret = mach_vm_region(mach_task_self(), address_p, size_p, VM_REGION_BASIC_INFO, (vm_region_info_t)&info, &count, &object_name);
+    mach_port_t object_name = MACH_PORT_NULL;
+    kern_return_t ret = mach_vm_region(mach_task_self(), address_p, size_p, VM_REGION_BASIC_INFO,
+                                        (vm_region_info_t)&info, &count, &object_name);
+    // [FIX] bail out early if mach_vm_region fails
+    if (ret != KERN_SUCCESS) {
+        return ret;
+    }
     vm_prot_t protection = info.protection;
     if(!protection){
         *address_p += *size_p;
         return get_region_address_and_size(address_p, size_p);
     }
-    pointer_t buffer;
-    mach_msg_type_number_t bufferSize = *size_p;
-    if ((ret = mach_vm_read(mach_task_self(), *address_p, *size_p, &buffer, &bufferSize)) != KERN_SUCCESS){
-        NSLog(@"vm_read failed");
+    pointer_t buffer = 0;
+    mach_msg_type_number_t bufferSize = 0;
+    ret = mach_vm_read(mach_task_self(), *address_p, *size_p, &buffer, &bufferSize);
+    if (ret != KERN_SUCCESS){
+        NSLog(@"vm_read failed: %d", ret);
+        return ret;
+    }
+    // [FIX] free the buffer we just read, otherwise it leaks on every region scan
+    if (buffer && bufferSize) {
+        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)buffer, bufferSize);
     }
     return ret;
 }
@@ -324,8 +336,30 @@ static void loadFrameWork(){
     NSLog(@"aslr: 0x%lx",(long)aslr);
 }
 
-static void loadPref(){
+// [ADD] Read prefs from kPrefPath first, then fall back to rootless & rootful paths.
+//       This makes Tweak.x work in BOTH environments regardless of how Prefix.pch defines kPrefPath.
+static NSMutableDictionary *loadPrefDict(){
     NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
+    if (prefs) return prefs;
+
+    NSArray<NSString *> *fallbackPaths = @[
+        @"/var/jb/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist",  // rootless (Dopamine/palera1n)
+        @"/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist"          // rootful
+    ];
+    for (NSString *path in fallbackPaths) {
+        prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+        if (prefs) {
+            NSLog(@"prefs loaded from fallback: %@", path);
+            return prefs;
+        }
+    }
+    NSLog(@"WARN: prefs not found at kPrefPath or any fallback path");
+    return nil;
+}
+
+static void loadPref(){
+    // [FIX] use loadPrefDict() with fallback
+    NSMutableDictionary *prefs = loadPrefDict();
     enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
     customFps=prefs[@"customFps"]?[prefs[@"customFps"] intValue]:60;
     setFPSOnFirstTouch=prefs[@"setFPSOnFirstTouch"]?[prefs[@"setFPSOnFirstTouch"] boolValue]:YES;
@@ -337,7 +371,8 @@ static void loadPref(){
 }
 static BOOL isEnabledApp(){
     NSString* bundleIdentifier=[[NSBundle mainBundle] bundleIdentifier];
-    NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
+    // [FIX] use loadPrefDict() with fallback
+    NSMutableDictionary *prefs = loadPrefDict();
     enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
     if(!enabled) return NO;
     return [prefs[@"apps"] containsObject:bundleIdentifier];
@@ -353,7 +388,12 @@ static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void
 
 #pragma mark ctor
 %ctor {
-    if(!isEnabledApp()) return;
+    // [ADD] debug logs to know quickly WHY the tweak skipped
+    NSLog(@"Unity60FPS ctor: bundle=%@", [[NSBundle mainBundle] bundleIdentifier]);
+    if(!isEnabledApp()) {
+        NSLog(@"Unity60FPS ctor: skipped (app not enabled or prefs missing)");
+        return;
+    }
     NSLog(@"ctor: Unity60FPS");
 
     loadPref();
