@@ -1,49 +1,96 @@
-name: Build and Package Theos App
+name: Build and Package Theos Tweak
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
+  workflow_dispatch:
+
+# [FIX] Set THEOS ở cấp workflow để tất cả step đều dùng được
+env:
+  THEOS: ${{ github.workspace }}/theos
 
 jobs:
-  build:
-    runs-on: macos-latest
+  build-rootless:
+    name: Build Rootless Package
+    # [FIX] Pin macos-14 (Apple Silicon, Xcode 15/16) để build arm64e ổn định
+    runs-on: macos-14
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup Theos
+    # [ADD] Cài đủ tool: ldid (sign), dpkg (build .deb), xz (compress), cmake (build Dobby)
+    - name: Install Build Dependencies
       run: |
-        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        brew install ldid xz dpkg make cmake
 
-    - name: Install ldid
-      run: brew install ldid
-
-    - name: Compile and Package
+    # [ADD] Clone Theos + tải iOS SDKs (bắt buộc cho arm64e trên iOS 14+)
+    - name: Setup Theos with iOS SDKs
       run: |
-        export THEOS=$HOME/theos
-        
-        # Build stage và ép quyền script tránh lỗi 644
-        make stage || true
-        find . -name "postinst" -exec chmod 755 {} +
-        find . -name "prerm" -exec chmod 755 {} +
-        find . -name "preinst" -exec chmod 755 {} +
-        find . -name "postrm" -exec chmod 755 {} +
-        
-        # Tiến hành đóng gói
-        make package
+        git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+        mkdir -p "$THEOS/sdks"
+        git clone --depth 1 https://github.com/theos/sdks.git /tmp/theos-sdks
+        mv /tmp/theos-sdks/iPhoneOS*.sdk "$THEOS/sdks/"
+        echo "Available SDKs:"
+        ls "$THEOS/sdks/"
 
-    - name: Move and Organize Debian Package
+    # [ADD] Build Dobby cho arm64 + arm64e rồi đặt vào $THEOS/lib và $THEOS/include
+    #       → dòng Unity60FPS_LIBRARIES = dobby trong Makefile sẽ tìm thấy
+    - name: Build Dobby (Universal arm64 + arm64e)
       run: |
-        # Tạo thư mục packages và gom tất cả file .deb được tạo ra vào đây
-        mkdir -p packages
-        find . -maxdepth 2 -name "*.deb" -exec cp {} packages/ \;
-        ls -la packages/
+        git clone --depth 1 https://github.com/jmpews/Dobby.git /tmp/Dobby
+        cd /tmp/Dobby
+
+        # --- Build arm64 slice ---
+        mkdir build_arm64 && cd build_arm64
+        cmake .. \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DDOBBY_GENERATE_SHARED=OFF
+        make -j$(sysctl -n hw.ncpu)
+        cd ..
+
+        # --- Build arm64e slice ---
+        mkdir build_arm64e && cd build_arm64e
+        cmake .. \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_ARCHITECTURES=arm64e \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DDOBBY_GENERATE_SHARED=OFF
+        make -j$(sysctl -n hw.ncpu)
+        cd ..
+
+        # --- Ghép 2 slice thành universal binary ---
+        mkdir -p "$THEOS/lib" "$THEOS/include"
+        lipo -create \
+          build_arm64/libdobby.a \
+          build_arm64e/libdobby.a \
+          -output "$THEOS/lib/libdobby.a"
+        cp include/dobby.h "$THEOS/include/"
+
+        echo "===> Dobby architectures:"
+        lipo -info "$THEOS/lib/libdobby.a"
+
+    # [FIX] Bỏ '|| true' → lỗi thật hiện ra ngay; thêm FINALPACKAGE=1 để build release
+    - name: Compile and Package (Rootless)
+      run: |
+        make package FINALPACKAGE=1
+
+    - name: Collect Packages
+      run: |
+        mkdir -p artifacts
+        find . -maxdepth 3 -name "*.deb" -exec cp {} artifacts/ \;
+        echo "===> Built packages:"
+        ls -la artifacts/
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: packages
-        path: packages/*.deb
+        name: packages-rootless
+        path: artifacts/*.deb
+        if-no-files-found: error
