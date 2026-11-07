@@ -7,7 +7,9 @@
 //   - Rootless : ROOT_PATH_NS(@"/x") → @"/var/jb/x"
 //   - RootHide : ROOT_PATH_NS(@"/x") → @"/var/containers/Bundle/Application/.jbroot-XXXX/x"
 //     (UUID ngẫu nhiên, resolve runtime — không hardcode được)
-#define kPrefPath ROOT_PATH_NS(@"/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist")
+
+// [REBRAND] Đã đổi sang tên file prefs của TaoJB
+#define kPrefPath ROOT_PATH_NS(@"/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist")
 #define kBundlePath ROOT_PATH_NS(@"/Library/PreferenceBundles/unity60fpspref.bundle")
 
 #define FPSNSLocalizedString(key) NSLocalizedStringFromTableInBundle((key),@"Root",[NSBundle bundleWithPath:kBundlePath],nil)
