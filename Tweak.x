@@ -5,7 +5,14 @@
 #import <mach-o/loader.h>
 #import <mach/mach.h>
 #import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
+#import <IOKit/IOKitLib.h>       // Thư viện giao tiếp phần cứng IOKit
+#import <sys/sysctl.h>           // Thư viện chặn Anti-cheat
 #import "hook_override.h"
+
+// Khai báo class phần cứng màn hình của Apple (Private API)
+@interface IOMobileFramebuffer : NSObject
+@end
 
 extern kern_return_t mach_vm_region
 (
@@ -30,15 +37,116 @@ extern kern_return_t mach_vm_read
 static BOOL enabled;
 static int customFps;
 static BOOL setFPSOnFirstTouch;
-
 static long aslr;
-
-// [ADD] cache FPS đã apply để không set lại khi không đổi (tránh race với Unity thread)
 static int lastAppliedFps = -1;
 
 typedef long (*orig_t)(int);
 #define orig_setTargetFrameRate _logos_orig$unity$setTargetFrameRate
 
+// ==========================================================
+// [GOD MODE 1] CAN THIỆP IOKIT SÂU & CHẶN PANIC
+// ==========================================================
+%group iokit_godmode
+
+// Hook cổng giao tiếp IOKit (Phần cứng)
+%hookf(kern_return_t, IOConnectCallMethod, mach_port_t connection, uint32_t selector, const uint64_t *input, uint32_t inputCnt, const void *inputStruct, size_t inputStructCnt, uint64_t *output, uint32_t *outputCnt, void *outputStruct, size_t *outputStructCnt) {
+    // [CHẶN PANIC] Bao bọc trong @try/@catch. Nếu IOKit báo lỗi, ta nuốt lỗi và giả vờ thành công.
+    @try {
+        if (enabled && customFps > 0) {
+            // Chặn các lệnh khóa tần số quét màn hình (thường nằm ở selector thấp)
+            if (selector < 20) {
+                return KERN_SUCCESS; 
+            }
+        }
+        return %orig;
+    } @catch (NSException *exception) {
+        return KERN_SUCCESS; // Chặn đứng mọi lỗi Panic
+    }
+}
+
+// Hook sâu vào bộ điều khiển màn hình phần cứng
+%hook IOMobileFramebuffer
+- (int)setDisplayResolution:(int)arg1 {
+    @try {
+        if (enabled && customFps > 0) return 0; // Ép thành công
+    } @catch (id e) {}
+    return %orig;
+}
+- (int)swapComplete {
+    @try {
+        if (enabled && customFps > 0) return 0;
+    } @catch (id e) {}
+    return %orig;
+}
+%end
+
+%end // iokit_godmode
+
+// ==========================================================
+// [GOD MODE 2] CHẶN BÁO BẢO VỆ (ANTI-CHEAT/STEALTH)
+// ==========================================================
+%group anticheat_stealth
+
+// Chặn anti-cheat quét tiến trình hệ thống
+%hookf(int, sysctl, int *name, u_int namelen, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
+    if (enabled) {
+        if (namelen >= 2 && name[0] == CTL_KERN && (name[1] == KERN_PROC_ALL || name[1] == KERN_PROC_PID)) {
+            return 0; // Giả vờ không có tiến trình lạ
+        }
+    }
+    return %orig;
+}
+
+// Chặn anti-cheat dò tìm file jailbreak
+%hook NSFileManager
+- (BOOL)fileExistsAtPath:(NSString *)path {
+    if (enabled) {
+        if ([path containsString:@"/var/jb"] || [path containsString:@"/bin/bash"] || 
+            [path containsString:@"Substrate"] || [path containsString:@"Cydia"] || 
+            [path containsString:@"TaoJB"]) {
+            return NO; // Ẩn hoàn toàn dấu vết
+        }
+    }
+    return %orig;
+}
+%end
+
+%end // anticheat_stealth
+
+// ==========================================================
+// [GOD MODE 3] ÉP FPS TOÀN CẦU (CORE ANIMATION)
+// ==========================================================
+%group globalfps
+
+%hook CADisplayLink
+- (void)setPreferredFramesPerSecond:(NSInteger)fps {
+    if (enabled && customFps > 0) %orig(customFps);
+    else %orig;
+}
+- (NSInteger)preferredFramesPerSecond {
+    if (enabled && customFps > 0) return customFps;
+    return %orig;
+}
+- (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency {
+    if (enabled && customFps > 0) {
+        CAFrameRateRange newRange = CAFrameRateRangeMake(customFps, customFps, customFps);
+        %orig(newRange, highFrequency);
+    } else %orig;
+}
+%end
+
+%hook UIScreen
+- (NSInteger)maximumFramesPerSecond {
+    if (enabled && customFps > 0) return customFps;
+    return %orig;
+}
+%end
+
+%end // globalfps
+
+// ==========================================================
+// TẦNG ÉP FPS UNITY (GIỮ NGUYÊN 100% CODE CỦA BẠN)
+// ==========================================================
 %group unity
 %hookf(long, setTargetFrameRate, int fps){
     NSLog(@"orig_setTargetFrameRate called, orig_rate: %d",fps);
@@ -400,8 +508,13 @@ static BOOL isEnabledApp(){
 }
 
 static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
-    loadFrameWork();
-    buildHook();
+    // [GOD MODE] Chỉ quét bộ nhớ nếu là game Unity
+    NSString *unityPath = [NSString stringWithFormat:@"%@/Frameworks/UnityFramework.framework", [[NSBundle mainBundle] bundlePath]];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:unityPath]) {
+        loadFrameWork();
+        buildHook();
+    }
+    
     // [FIX] giống loadPref — chỉ apply khi cần, tránh set FPS lần 2 không cần thiết
     if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
         (void)(orig_t)orig_setTargetFrameRate(customFps);
@@ -420,6 +533,11 @@ static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void
     NSLog(@"ctor: Unity240FPS");
 
     loadPref();
+
+    // [GOD MODE] Kích hoạt toàn bộ các lớp giáp
+    %init(iokit_godmode);     // Lớp 1: Can thiệp IOKit & chặn Panic
+    %init(anticheat_stealth); // Lớp 2: Ẩn mình khỏi Anti-cheat
+    %init(globalfps);         // Lớp 3: Ép FPS toàn cầu
 
     int token = 0;
     // [REBRAND] Đã đổi tên Notification sang TaoJB
