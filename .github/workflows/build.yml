@@ -1,0 +1,49 @@
+name: Build and Package Theos App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+
+    - name: Install ldid
+      run: brew install ldid
+
+    - name: Compile and Package
+      run: |
+        export THEOS=$HOME/theos
+        
+        # Build stage và ép quyền script tránh lỗi 644
+        make stage || true
+        find . -name "postinst" -exec chmod 755 {} +
+        find . -name "prerm" -exec chmod 755 {} +
+        find . -name "preinst" -exec chmod 755 {} +
+        find . -name "postrm" -exec chmod 755 {} +
+        
+        # Tiến hành đóng gói
+        make package
+
+    - name: Move and Organize Debian Package
+      run: |
+        # Tạo thư mục packages và gom tất cả file .deb được tạo ra vào đây
+        mkdir -p packages
+        find . -maxdepth 2 -name "*.deb" -exec cp {} packages/ \;
+        ls -la packages/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: packages/*.deb
