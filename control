@@ -1,11 +1,11 @@
-Package: com.brend0n.fgotw60fps
-Name: Unity60FPS
-Depends: mobilesubstrate, preferenceloader, com.opa334.altlist
-Version: 0.1.4~b1
-Architecture: iphoneos-arm
-Description: Force Unity Games/Apps render at custom framerate(60/30)
-Maintainer: Brend0n <brendonjkding@126.com>
-Author: Brend0n <brendonjkding@126.com>
+Package: com.taojb.fgotw60fps
+Name: Unity240FPS
+Depends: mobilesubstrate, preferenceloader, com.opa334.altlist, firmware (>= 14.0)
+Version: 1.2.0~1b
+Architecture: iphoneos-arm64
+Description: Force Unity Games/Apps to render at a custom framerate (30-240 FPS)
+Maintainer: TaoJB
+Author: TaoJB (fork of brend0n)
 Section: Tweaks
-Depiction: http://brendonjkding.github.io/depictions/web/?p=com.brend0n.fgotw60fps
-SileoDepiction: http://brendonjkding.github.io/depictions/web/com.brend0n.fgotw60fps/depiction.json
+Depiction: https://brendonjkding.github.io/depictions/web/?p=com.brend0n.fgotw60fps
+SileoDepiction: https://brendonjkding.github.io/depictions/web/com.brend0n.fgotw60fps/depiction.json
