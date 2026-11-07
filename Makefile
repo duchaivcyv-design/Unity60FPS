@@ -10,8 +10,8 @@ else
 endif
 export THEOS_PACKAGE_SCHEME
 
-# [FIX] deployment target 14.0 để build được arm64e
-TARGET = iphone:clang:latest:14.0
+# Thành:
+TARGET = iphone:clang:16.5:14.0
 
 # Rootless và roothide đều cần arm64e (A12+), rootful chỉ cần arm64
 ifneq ($(filter rootless roothide,$(THEOS_PACKAGE_SCHEME)),)
