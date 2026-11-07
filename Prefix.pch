@@ -1,10 +1,19 @@
 #ifdef __OBJC__
 
-#define kPrefPath @THEOS_PACKAGE_INSTALL_PREFIX"/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist"
-#define kBundlePath @THEOS_PACKAGE_INSTALL_PREFIX"/Library/PreferenceBundles/unity60fpspref.bundle"
+#import <rootless.h>
+
+// [FIX] ROOT_PATH_NS() resolve đúng path cho CẢ 3 scheme:
+//   - Rootful  : ROOT_PATH_NS(@"/x") → @"/x"
+//   - Rootless : ROOT_PATH_NS(@"/x") → @"/var/jb/x"
+//   - RootHide : ROOT_PATH_NS(@"/x") → @"/var/containers/Bundle/Application/.jbroot-XXXX/x"
+//     (UUID ngẫu nhiên, resolve runtime — không hardcode được)
+#define kPrefPath ROOT_PATH_NS(@"/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist")
+#define kBundlePath ROOT_PATH_NS(@"/Library/PreferenceBundles/unity60fpspref.bundle")
 
 #define FPSNSLocalizedString(key) NSLocalizedStringFromTableInBundle((key),@"Root",[NSBundle bundleWithPath:kBundlePath],nil)
 
+// [KEEP] Release build tắt NSLog để đỡ spam — nhưng cần bật khi debug hook.
+//        Build debug: make package DEBUG=1
 #if DEBUG
 #else
 #define NSLog(FORMAT, ...)
