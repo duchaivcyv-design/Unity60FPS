@@ -4,6 +4,8 @@
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 #import <mach/mach.h>
+#import <mach/mach_vm.h>       // [ADD] fix lỗi mach_vm_deallocate
+#import <UIKit/UIKit.h>        // [ADD] fix lỗi UIApplicationDidFinishLaunchingNotification
 #import "hook_override.h"
 
 extern kern_return_t mach_vm_region
