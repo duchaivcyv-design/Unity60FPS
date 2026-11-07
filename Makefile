@@ -28,6 +28,7 @@ TWEAK_NAME = Unity60FPS Unity60FPSLoader
 Unity60FPS_FILES = Tweak.x
 Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
 Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
+Unity60FPS_LDFLAGS = -stdlib=libc++    # <--- DÒNG QUAN TRỌNG ĐÃ ĐƯỢC THÊM VÀO ĐÂY
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
