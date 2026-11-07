@@ -24,10 +24,10 @@ INSTALL_TARGET_PROCESSES = fatego
 
 TWEAK_NAME = Unity60FPS Unity60FPSLoader
 
-# [FIX] XÓA 2 dòng cũ, THAY BẰNG 2 dòng này để Theos tự tìm Dobby trong $THEOS/lib
+# [FIX] Trỏ thẳng đường dẫn tuyệt đối để không phụ thuộc vào $THEOS/lib
 Unity60FPS_FILES = Tweak.x
-Unity60FPS_CFLAGS = -fobjc-arc
-Unity60FPS_LIBRARIES = dobby
+Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
+Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
