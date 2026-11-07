@@ -5,12 +5,11 @@
 #import <mach-o/loader.h>
 #import <mach/mach.h>
 #import <UIKit/UIKit.h>
-#import <QuartzCore/QuartzCore.h>
-#import <IOKit/IOKitLib.h>       // Thư viện giao tiếp phần cứng IOKit
-#import <sys/sysctl.h>           // Thư viện chặn Anti-cheat
+#import <QuartzCore/QuartzCore.h> 
+#import <IOKit/IOKitLib.h>       
+#import <sys/sysctl.h>           
 #import "hook_override.h"
 
-// Khai báo class phần cứng màn hình của Apple (Private API)
 @interface IOMobileFramebuffer : NSObject
 @end
 
@@ -48,27 +47,23 @@ typedef long (*orig_t)(int);
 // ==========================================================
 %group iokit_godmode
 
-// Hook cổng giao tiếp IOKit (Phần cứng)
 %hookf(kern_return_t, IOConnectCallMethod, mach_port_t connection, uint32_t selector, const uint64_t *input, uint32_t inputCnt, const void *inputStruct, size_t inputStructCnt, uint64_t *output, uint32_t *outputCnt, void *outputStruct, size_t *outputStructCnt) {
-    // [CHẶN PANIC] Bao bọc trong @try/@catch. Nếu IOKit báo lỗi, ta nuốt lỗi và giả vờ thành công.
     @try {
         if (enabled && customFps > 0) {
-            // Chặn các lệnh khóa tần số quét màn hình (thường nằm ở selector thấp)
             if (selector < 20) {
                 return KERN_SUCCESS; 
             }
         }
         return %orig;
     } @catch (NSException *exception) {
-        return KERN_SUCCESS; // Chặn đứng mọi lỗi Panic
+        return KERN_SUCCESS;
     }
 }
 
-// Hook sâu vào bộ điều khiển màn hình phần cứng
 %hook IOMobileFramebuffer
 - (int)setDisplayResolution:(int)arg1 {
     @try {
-        if (enabled && customFps > 0) return 0; // Ép thành công
+        if (enabled && customFps > 0) return 0;
     } @catch (id e) {}
     return %orig;
 }
@@ -87,24 +82,22 @@ typedef long (*orig_t)(int);
 // ==========================================================
 %group anticheat_stealth
 
-// Chặn anti-cheat quét tiến trình hệ thống
 %hookf(int, sysctl, int *name, u_int namelen, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
     if (enabled) {
         if (namelen >= 2 && name[0] == CTL_KERN && (name[1] == KERN_PROC_ALL || name[1] == KERN_PROC_PID)) {
-            return 0; // Giả vờ không có tiến trình lạ
+            return 0;
         }
     }
     return %orig;
 }
 
-// Chặn anti-cheat dò tìm file jailbreak
 %hook NSFileManager
 - (BOOL)fileExistsAtPath:(NSString *)path {
     if (enabled) {
         if ([path containsString:@"/var/jb"] || [path containsString:@"/bin/bash"] || 
             [path containsString:@"Substrate"] || [path containsString:@"Cydia"] || 
             [path containsString:@"TaoJB"]) {
-            return NO; // Ẩn hoàn toàn dấu vết
+            return NO;
         }
     }
     return %orig;
@@ -127,12 +120,17 @@ typedef long (*orig_t)(int);
     if (enabled && customFps > 0) return customFps;
     return %orig;
 }
-- (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency {
+
+// [FIX] Bọc trong #if để tránh lỗi biên dịch CAFrameRateRange trên iOS 14
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 150000
+- (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency API_AVAILABLE(ios(15.0)) {
     if (enabled && customFps > 0) {
         CAFrameRateRange newRange = CAFrameRateRangeMake(customFps, customFps, customFps);
         %orig(newRange, highFrequency);
     } else %orig;
 }
+#endif
+
 %end
 
 %hook UIScreen
@@ -181,7 +179,6 @@ static inline uint64_t get_adrp_address(uint32_t ins,long pc){
     if((value>>20)&1) value|=0xffe00000;
     else value&=~0xffe00000;
     if(is_adrp) value<<= 12;
-    //sign extend value to 64 bits
     if(is_adrp) return get_page_address_64(pc, PAGE_SIZE) + (int64_t)value;
     else return pc + (int64_t)value;
 }
@@ -197,11 +194,8 @@ static inline uint64_t get_b_address(uint32_t ins,long pc){
 }
 static inline uint64_t get_add_value(uint32_t ins){
     uint32_t instr2=ins;
-
-    //imm12 64 bits if sf = 1, else 32 bits
     uint64_t imm12;
     
-    //get the imm value from add instruction
     instr2 = ins;
     imm12 = (instr2 & 0x3ffc00) >> 10;
     if(instr2 & 0xc00000)
@@ -220,16 +214,13 @@ static inline uint64_t get_str_imm12(uint32_t ins){
 static inline bool is_32_imm_str(uint32_t ins){
     return (ins&0xFFC00000)==0xB9000000;
 }
-// helper function
 
-// [FIX] Guard against mach_vm_region failure + memory leak (mach_vm_read buffer never freed)
 static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, mach_vm_size_t *size_p){
     vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
     mach_port_t object_name = MACH_PORT_NULL;
     kern_return_t ret = mach_vm_region(mach_task_self(), address_p, size_p, VM_REGION_BASIC_INFO,
                                         (vm_region_info_t)&info, &count, &object_name);
-    // [FIX] bail out early if mach_vm_region fails
     if (ret != KERN_SUCCESS) {
         return ret;
     }
@@ -245,7 +236,6 @@ static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, ma
         NSLog(@"vm_read failed: %d", ret);
         return ret;
     }
-    // [FIX] free the buffer we just read, otherwise it leaks on every region scan
     if (buffer && bufferSize) {
       vm_deallocate(mach_task_self(), (vm_address_t)buffer, bufferSize);
     }
@@ -268,7 +258,6 @@ static long find_adrp_add_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
     mach_vm_offset_t address_region_start=0;
     mach_vm_size_t size=0;
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
-        // NSLog(@"0x%lx 0x%lx",(long)(address_region_start-aslr),((long)address_region_start+(long)size-aslr));
         if(address_region_start>=ad_target){
             return false;
         }
@@ -295,7 +284,6 @@ static long find_adrp_str_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
     mach_vm_offset_t address_region_start=0;
     mach_vm_size_t size=0;
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
-        // NSLog(@"0x%lx 0x%lx",(long)(address_region_start-aslr),((long)address_region_start+(long)size-aslr));
         if(address_region_start>=ad_target){
             return false;
         }
@@ -321,16 +309,13 @@ static long find_adrp_str_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
 static long find_ref_to_str(const char *str, long ad_start, long ad_end){
     mach_vm_offset_t address_region_start=ad_start;
     mach_vm_size_t size=0;
-    // [FIX] Lưu first char để skip nhanh — giảm ~10-20x số lần gọi strcmp trên FGO 200MB+
     const char first = str[0];
     NSLog(@"finding: %s %p",str, str);
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
-        // NSLog(@"0x%lx 0x%lx",(long)(address_region_start-aslr),((long)address_region_start+(long)size-aslr));
         for(long ad=address_region_start;ad<address_region_start+size;ad++){
             if(ad>=ad_end){
                 return false;
             }
-            // [FIX] check first char trước, chỉ gọi strcmp khi khớp
             if(*(const char*)ad != first) continue;
             if(!strcmp((const char*)(ad),str)) {
                 NSLog(@"candidate: 0x%lx",ad-aslr);
@@ -417,8 +402,6 @@ static void buildHook(){
         }
     }
 
-    // [FIX] Không abort: nếu không tìm thấy, tweak tự disable nhưng GAME VẪN SỐNG.
-    //       Tránh user thấy FGO crash ngay khi mở, tránh anti-cheat flag pattern SIGABRT.
     if(!ad_set_targetFrameRate) {
         NSLog(@"[Unity240FPS] Cannot locate setTargetFrameRate — tweak disabled, game continues");
         return;
@@ -455,16 +438,13 @@ static void loadFrameWork(){
     NSLog(@"aslr: 0x%lx",(long)aslr);
 }
 
-// [ADD] Read prefs from kPrefPath first, then fall back to rootless & rootful paths.
-//       This makes Tweak.x work in BOTH environments regardless of how Prefix.pch defines kPrefPath.
 static NSMutableDictionary *loadPrefDict(){
     NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
     if (prefs) return prefs;
 
-    // [REBRAND] Đã đổi tên file prefs sang TaoJB
     NSArray<NSString *> *fallbackPaths = @[
-        @"/var/jb/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist",  // rootless (Dopamine/palera1n)
-        @"/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist"          // rootful
+        @"/var/jb/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist",
+        @"/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist"
     ];
     for (NSString *path in fallbackPaths) {
         prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
@@ -478,12 +458,9 @@ static NSMutableDictionary *loadPrefDict(){
 }
 
 static void loadPref(){
-    // [FIX] use loadPrefDict() with fallback
     NSMutableDictionary *prefs = loadPrefDict();
     enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
 
-    // [FIX] validate range: user có thể sửa tay file prefs qua Filza thành 0/99999
-    //       → Unity crash hoặc bị anti-cheat flag vì FPS bất thường
     int fps = prefs[@"customFps"]?[prefs[@"customFps"] intValue]:60;
     if (fps < 30)  fps = 30;
     if (fps > 240) fps = 240;
@@ -492,7 +469,6 @@ static void loadPref(){
     setFPSOnFirstTouch=prefs[@"setFPSOnFirstTouch"]?[prefs[@"setFPSOnFirstTouch"] boolValue]:YES;
     NSLog(@"customFps: %d",customFps);
 
-    // [FIX] chỉ apply khi FPS thực sự đổi — tránh set lại mỗi lần user toggle "enabled"
     if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
         (void)(orig_t)orig_setTargetFrameRate(customFps);
         lastAppliedFps = customFps;
@@ -500,7 +476,6 @@ static void loadPref(){
 }
 static BOOL isEnabledApp(){
     NSString* bundleIdentifier=[[NSBundle mainBundle] bundleIdentifier];
-    // [FIX] use loadPrefDict() with fallback
     NSMutableDictionary *prefs = loadPrefDict();
     enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
     if(!enabled) return NO;
@@ -508,14 +483,12 @@ static BOOL isEnabledApp(){
 }
 
 static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
-    // [GOD MODE] Chỉ quét bộ nhớ nếu là game Unity
     NSString *unityPath = [NSString stringWithFormat:@"%@/Frameworks/UnityFramework.framework", [[NSBundle mainBundle] bundlePath]];
     if ([[NSFileManager defaultManager] fileExistsAtPath:unityPath]) {
         loadFrameWork();
         buildHook();
     }
     
-    // [FIX] giống loadPref — chỉ apply khi cần, tránh set FPS lần 2 không cần thiết
     if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
         (void)(orig_t)orig_setTargetFrameRate(customFps);
         lastAppliedFps = customFps;
@@ -524,7 +497,6 @@ static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void
 
 #pragma mark ctor
 %ctor {
-    // [ADD] debug logs to know quickly WHY the tweak skipped
     NSLog(@"Unity240FPS ctor: bundle=%@", [[NSBundle mainBundle] bundleIdentifier]);
     if(!isEnabledApp()) {
         NSLog(@"Unity240FPS ctor: skipped (app not enabled or prefs missing)");
@@ -534,13 +506,11 @@ static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void
 
     loadPref();
 
-    // [GOD MODE] Kích hoạt toàn bộ các lớp giáp
-    %init(iokit_godmode);     // Lớp 1: Can thiệp IOKit & chặn Panic
-    %init(anticheat_stealth); // Lớp 2: Ẩn mình khỏi Anti-cheat
-    %init(globalfps);         // Lớp 3: Ép FPS toàn cầu
+    %init(iokit_godmode);     
+    %init(anticheat_stealth); 
+    %init(globalfps);         
 
     int token = 0;
-    // [REBRAND] Đã đổi tên Notification sang TaoJB
     notify_register_dispatch("com.taojb.fgotw60fps/loadPref", &token, dispatch_get_main_queue(), ^(int token) {
         loadPref();
     });
