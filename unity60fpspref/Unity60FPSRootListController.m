@@ -1,7 +1,17 @@
 #include "Unity60FPSRootListController.h"
 #import "BDInfoListController.h"
 #import "FPSLicenseViewController.h"
+#import <rootless.h>
+
 @implementation Unity60FPSRootListController
+
+// [ADD] helper tránh lặp code + đảm bảo cùng path với Tweak.x (qua ROOT_PATH_NS)
+- (NSString *)prefsPathForSpecifier:(PSSpecifier *)specifier {
+    NSString *defaults = specifier.properties[@"defaults"];
+    if (!defaults) return nil;
+    // [FIX] ROOT_PATH_NS() chạy đúng trên cả 3 scheme (rootful/rootless/roothide)
+    return ROOT_PATH_NS([NSString stringWithFormat:@"/var/mobile/Library/Preferences/%@.plist", defaults]);
+}
 
 - (NSArray *)specifiers {
 	if (!_specifiers) {
@@ -43,32 +53,49 @@
 
 	return _specifiers;
 }
+
 - (id)readPreferenceValue:(PSSpecifier*)specifier {
-    NSString *path = [NSString stringWithFormat:@THEOS_PACKAGE_INSTALL_PREFIX"/var/mobile/Library/Preferences/%@.plist", specifier.properties[@"defaults"]];
+    // [FIX] dùng helper ROOT_PATH_NS
+    NSString *path = [self prefsPathForSpecifier:specifier];
+    if (!path) return specifier.properties[@"default"];
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:path]];
     return (settings[specifier.properties[@"key"]]) ?: specifier.properties[@"default"];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier*)specifier {
-    NSString *path = [NSString stringWithFormat:@THEOS_PACKAGE_INSTALL_PREFIX"/var/mobile/Library/Preferences/%@.plist", specifier.properties[@"defaults"]];
+    // [FIX] dùng helper ROOT_PATH_NS
+    NSString *path = [self prefsPathForSpecifier:specifier];
+    if (!path) return;
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:path]];
     [settings setObject:value forKey:specifier.properties[@"key"]];
     [settings writeToFile:path atomically:YES];
-    CFStringRef notificationName = (__bridge CFStringRef )specifier.properties[@"PostNotification"];
+
+    // [ADD] Luôn post notification mà tweak đang lắng nghe (loadPref).
+    //       Nếu specifier có PostNotification riêng thì post thêm cái đó.
+    //       Trước đây nếu Root.plist quên set PostNotification → tweak không reload.
+    CFStringRef notificationName = (__bridge CFStringRef)specifier.properties[@"PostNotification"];
     if (notificationName) {
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), notificationName, NULL, NULL, YES);
+    } else {
+        // Fallback: đảm bảo tweak reload prefs live
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                             CFSTR("com.brend0n.unity60fpspref/loadPref"),
+                                             NULL, NULL, YES);
     }
 }
+
 -(void)showInfo{
   UIBarButtonItem *backItem = [[UIBarButtonItem alloc] initWithTitle:@"" style:UIBarButtonItemStylePlain target:nil action:nil];
   self.navigationItem.backBarButtonItem = backItem; 
   [self.navigationController pushViewController:[[BDInfoListController alloc] init] animated:TRUE];
 }
+
 -(void)showLicenses{
   UIBarButtonItem *backItem = [[UIBarButtonItem alloc] initWithTitle:@"" style:UIBarButtonItemStylePlain target:nil action:nil];
   self.navigationItem.backBarButtonItem = backItem; 
   [self.navigationController pushViewController:[[FPSLicenseViewController alloc] init] animated:TRUE];
 }
+
 @end
