@@ -13,7 +13,6 @@ env:
 jobs:
   build-rootless:
     name: Build Rootless Package
-    # ✅ Đã chuyển từ macos-14 sang macos-15 (vẫn là Apple Silicon)
     runs-on: macos-15
 
     steps:
@@ -62,16 +61,20 @@ jobs:
         make -j$(sysctl -n hw.ncpu)
         cd ..
 
-        # --- Ghép 2 slice thành universal binary ---
-        mkdir -p "$THEOS/lib" "$THEOS/include"
+        # --- Tự động tìm file libdobby.a (tránh lỗi sai đường dẫn của CMake) ---
+        ARM64_LIB=$(find build_arm64 -name "libdobby.a" | head -n 1)
+        ARM64E_LIB=$(find build_arm64e -name "libdobby.a" | head -n 1)
+
+        # --- Ghép 2 slice thành universal binary và copy vào project ---
+        mkdir -p "$GITHUB_WORKSPACE/vendor/dobby"
         lipo -create \
-          build_arm64/libdobby.a \
-          build_arm64e/libdobby.a \
-          -output "$THEOS/lib/libdobby.a"
-        cp include/dobby.h "$THEOS/include/"
+          "$ARM64_LIB" \
+          "$ARM64E_LIB" \
+          -output "$GITHUB_WORKSPACE/vendor/dobby/libdobby.a"
+        cp include/dobby.h "$GITHUB_WORKSPACE/vendor/dobby/"
 
         echo "===> Dobby architectures:"
-        lipo -info "$THEOS/lib/libdobby.a"
+        lipo -info "$GITHUB_WORKSPACE/vendor/dobby/libdobby.a"
 
     - name: Compile and Package (Rootless)
       run: |
