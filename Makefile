@@ -24,11 +24,11 @@ INSTALL_TARGET_PROCESSES = fatego
 
 TWEAK_NAME = Unity60FPS Unity60FPSLoader
 
-# [FIX] Trỏ thẳng đường dẫn tuyệt đối để không phụ thuộc vào $THEOS/lib
+# [FIX] Trỏ thẳng đường dẫn tuyệt đối và liên kết thư viện C++
 Unity60FPS_FILES = Tweak.x
 Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
 Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
-Unity60FPS_LDFLAGS = -stdlib=libc++    # <--- DÒNG QUAN TRỌNG ĐÃ ĐƯỢC THÊM VÀO ĐÂY
+Unity60FPS_LIBRARIES = c++ c++abi     # <--- THAY DÒNG LDFLAGS BẰNG DÒNG NÀY
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
