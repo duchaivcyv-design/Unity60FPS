@@ -1,20 +1,16 @@
-"CHOOSE_ENABLED_APP"="Choose Enabled Unity Games";
-"AUTHOR"="Author";
-"ACTION_YES"="YES";
-"ACTION_NO"="NO";
-"ENABLED"="Enabled";
-"SELECT_ALL"="Select All";
-"DESELECT_ALL"="Deselect All";
-"CANCEL"="Cancel";
-"SELECT_DESELECT_ALL"="Select/Deselect All";
+"CHOOSE_ENABLED_APP" = "Chọn Ứng Dụng / Game Bật";
+"AUTHOR" = "Tác giả";
+"ACTION_YES" = "YES";
+"ACTION_NO" = "NO";
+"ENABLED" = "Bật Tweak";
+"SELECT_ALL" = "Chọn tất cả";
+"DESELECT_ALL" = "Bỏ chọn tất cả";
+"CANCEL" = "Hủy";
+"SELECT_DESELECT_ALL" = "Chọn / Bỏ chọn tất cả";
 
-"WARNING"="Due to the way it works, hooking directly to game engine, use this Tweak AT YOUR OWN RISK";
+"WARNING" = "CẢNH BÁO: Tweak can thiệp sâu vào IOKit & Core Animation. Hãy tự chịu rủi ro khi sử dụng! Máy có thể nóng lên và tụt pin nhanh hơn.";
 
-"DESCRIPTION"="1. Note that not any values is valid. Due to vsync, it seems the ultimate framerate will be 60 or 30. 
-2. To render at 60 FPS, typically you set the framerate to 60. 
-3. But on some devices, you may find that 45 is a better value. I don't know the reason, but it works.
-4. You can use my another Tweak called FPSIndicator to show real-time FPS
-";
+"DESCRIPTION" = "1. Ép FPS tùy chỉnh (30-240) cho toàn bộ ứng dụng đã chọn, không chỉ riêng game Unity.\n2. FPS tối đa thực tế phụ thuộc vào tần số quét màn hình của bạn (60Hz, 90Hz, 120Hz).\n3. Mức FPS đã được giới hạn an toàn để tránh crash game.\n4. Nếu game giật lag hoặc máy quá nóng, hãy giảm mức FPS xuống.";
 
-"CUSTOM_FPS"="Custom FPS";
-"SET_FPS_ON_FIRST_TOUCH"="Set FPS On First Touch";
+"CUSTOM_FPS" = "Giới Hạn FPS";
+"SET_FPS_ON_FIRST_TOUCH" = "Áp Dụng FPS Khi Chạm Lần Đầu";
