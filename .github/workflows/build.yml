@@ -38,26 +38,31 @@ jobs:
         git clone --depth 1 https://github.com/jmpews/Dobby.git /tmp/Dobby
         cd /tmp/Dobby
 
+        # --- Build arm64 slice ---
         mkdir build_arm64 && cd build_arm64
         cmake .. \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64 \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
           -DCMAKE_BUILD_TYPE=Release \
           -DDOBBY_GENERATE_SHARED=OFF
         make -j$(sysctl -n hw.ncpu)
         cd ..
 
+        # --- Build arm64e slice ---
         mkdir build_arm64e && cd build_arm64e
         cmake .. \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_ARCHITECTURES=arm64e \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64e \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
           -DCMAKE_BUILD_TYPE=Release \
           -DDOBBY_GENERATE_SHARED=OFF
         make -j$(sysctl -n hw.ncpu)
         cd ..
 
+        # --- Ghép 2 slice thành universal binary ---
         mkdir -p "$THEOS/lib" "$THEOS/include"
         lipo -create \
           build_arm64/libdobby.a \
