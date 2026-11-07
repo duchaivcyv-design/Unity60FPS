@@ -4,7 +4,7 @@
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 #import <mach/mach.h>
-#import <UIKit/UIKit.h>        // Giữ dòng này
+#import <UIKit/UIKit.h>
 #import "hook_override.h"
 
 extern kern_return_t mach_vm_region
@@ -225,8 +225,7 @@ static long find_ref_to_str(const char *str, long ad_start, long ad_end){
             // [FIX] check first char trước, chỉ gọi strcmp khi khớp
             if(*(const char*)ad != first) continue;
             if(!strcmp((const char*)(ad),str)) {
-                static int count=0;
-                NSLog(@"candidate %d: 0x%lx",++count,ad-aslr);
+                NSLog(@"candidate: 0x%lx",ad-aslr);
                 long ad_ref=find_adrp_add_ref_to_ad(ad, NULL, 0);
                 if(ad_ref) return ad_ref;
             }
@@ -313,7 +312,7 @@ static void buildHook(){
     // [FIX] Không abort: nếu không tìm thấy, tweak tự disable nhưng GAME VẪN SỐNG.
     //       Tránh user thấy FGO crash ngay khi mở, tránh anti-cheat flag pattern SIGABRT.
     if(!ad_set_targetFrameRate) {
-        NSLog(@"[Unity60FPS] Cannot locate setTargetFrameRate — tweak disabled, game continues");
+        NSLog(@"[Unity240FPS] Cannot locate setTargetFrameRate — tweak disabled, game continues");
         return;
     }
 
@@ -354,9 +353,10 @@ static NSMutableDictionary *loadPrefDict(){
     NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
     if (prefs) return prefs;
 
+    // [REBRAND] Đã đổi tên file prefs sang TaoJB
     NSArray<NSString *> *fallbackPaths = @[
-        @"/var/jb/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist",  // rootless (Dopamine/palera1n)
-        @"/var/mobile/Library/Preferences/com.brend0n.unity60fpspref.plist"          // rootful
+        @"/var/jb/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist",  // rootless (Dopamine/palera1n)
+        @"/var/mobile/Library/Preferences/com.taojb.fgotw60fps.plist"          // rootful
     ];
     for (NSString *path in fallbackPaths) {
         prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
@@ -412,17 +412,18 @@ static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void
 #pragma mark ctor
 %ctor {
     // [ADD] debug logs to know quickly WHY the tweak skipped
-    NSLog(@"Unity60FPS ctor: bundle=%@", [[NSBundle mainBundle] bundleIdentifier]);
+    NSLog(@"Unity240FPS ctor: bundle=%@", [[NSBundle mainBundle] bundleIdentifier]);
     if(!isEnabledApp()) {
-        NSLog(@"Unity60FPS ctor: skipped (app not enabled or prefs missing)");
+        NSLog(@"Unity240FPS ctor: skipped (app not enabled or prefs missing)");
         return;
     }
-    NSLog(@"ctor: Unity60FPS");
+    NSLog(@"ctor: Unity240FPS");
 
     loadPref();
 
     int token = 0;
-    notify_register_dispatch("com.brend0n.unity60fpspref/loadPref", &token, dispatch_get_main_queue(), ^(int token) {
+    // [REBRAND] Đã đổi tên Notification sang TaoJB
+    notify_register_dispatch("com.taojb.fgotw60fps/loadPref", &token, dispatch_get_main_queue(), ^(int token) {
         loadPref();
     });
 
