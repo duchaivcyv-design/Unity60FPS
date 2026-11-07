@@ -29,6 +29,7 @@ Unity60FPS_FILES = Tweak.x
 Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
 Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
 Unity60FPS_LIBRARIES = c++ c++abi     # <--- THAY DÒNG LDFLAGS BẰNG DÒNG NÀY
+ADDITIONAL_CFLAGS += -Wno-error=unguarded-availability-new
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
