@@ -10,7 +10,7 @@ else
 endif
 export THEOS_PACKAGE_SCHEME
 
-# Thành:
+# SDK 16.5 để build được arm64e và có Private Framework (Preferences)
 TARGET = iphone:clang:16.5:14.0
 
 # Rootless và roothide đều cần arm64e (A12+), rootful chỉ cần arm64
@@ -24,17 +24,16 @@ INSTALL_TARGET_PROCESSES = fatego
 
 TWEAK_NAME = Unity60FPS Unity60FPSLoader
 
-# [FIX] Trỏ thẳng đường dẫn tuyệt đối và liên kết thư viện C++
 Unity60FPS_FILES = Tweak.x
 Unity60FPS_CFLAGS = -fobjc-arc -I$(THEOS_PROJECT_DIR)/vendor/dobby
 Unity60FPS_OBJ_FILES = $(THEOS_PROJECT_DIR)/vendor/dobby/libdobby.a
-Unity60FPS_LIBRARIES = c++ c++abi     # <--- THAY DÒNG LDFLAGS BẰNG DÒNG NÀY
-ADDITIONAL_CFLAGS += -Wno-error=unguarded-availability-new
+Unity60FPS_LIBRARIES = c++ c++abi
+Unity60FPS_FRAMEWORKS = IOKit
 
 Unity60FPSLoader_FILES = TweakLoader.x
 Unity60FPSLoader_CFLAGS = -fobjc-arc
 
-ADDITIONAL_CFLAGS += -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -include $(THEOS_PROJECT_DIR)/Prefix.pch
+ADDITIONAL_CFLAGS += -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=unused-value -Wno-error=unguarded-availability-new -include $(THEOS_PROJECT_DIR)/Prefix.pch
 
 SUBPROJECTS += unity60fpspref
 
