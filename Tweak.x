@@ -121,7 +121,6 @@ typedef long (*orig_t)(int);
     return %orig;
 }
 
-// [FIX] Xóa API_AVAILABLE để Logos không bị lỗi cú pháp
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 150000
 - (void)setFrameRateRange:(CAFrameRateRange)frameRateRange highFrequencyTimestamps:(BOOL)highFrequency {
     if (enabled && customFps > 0) {
@@ -154,7 +153,6 @@ typedef long (*orig_t)(int);
 %end//unity
 
 #pragma mark helper function
-// thanks to https://reverseengineering.stackexchange.com/questions/15418/getting-function-address-by-reading-adrp-and-add-instruction-values
 
 static inline uint64_t get_page_address_64(uint64_t addr, uint32_t pagesize)
 {
@@ -170,7 +168,6 @@ static inline uint64_t get_adrp_address(uint32_t ins,long pc){
     uint32_t instr, immlo, immhi;
     int32_t value;
     bool is_adrp=((ins>>31)&0b1)?1:0;
-
 
     instr = ins;
     immlo = (0x60000000 & instr) >> 29;
@@ -201,7 +198,6 @@ static inline uint64_t get_add_value(uint32_t ins){
     if(instr2 & 0xc00000)
     {
             imm12 <<= 12;
-
     }
     return imm12;
 }
@@ -221,9 +217,7 @@ static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, ma
     mach_port_t object_name = MACH_PORT_NULL;
     kern_return_t ret = mach_vm_region(mach_task_self(), address_p, size_p, VM_REGION_BASIC_INFO,
                                         (vm_region_info_t)&info, &count, &object_name);
-    if (ret != KERN_SUCCESS) {
-        return ret;
-    }
+    if (ret != KERN_SUCCESS) return ret;
     vm_prot_t protection = info.protection;
     if(!protection){
         *address_p += *size_p;
@@ -232,10 +226,7 @@ static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, ma
     pointer_t buffer = 0;
     mach_msg_type_number_t bufferSize = 0;
     ret = mach_vm_read(mach_task_self(), *address_p, *size_p, &buffer, &bufferSize);
-    if (ret != KERN_SUCCESS){
-        NSLog(@"vm_read failed: %d", ret);
-        return ret;
-    }
+    if (ret != KERN_SUCCESS) return ret;
     if (buffer && bufferSize) {
       vm_deallocate(mach_task_self(), (vm_address_t)buffer, bufferSize);
     }
@@ -258,13 +249,9 @@ static long find_adrp_add_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
     mach_vm_offset_t address_region_start=0;
     mach_vm_size_t size=0;
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
-        if(address_region_start>=ad_target){
-            return false;
-        }
+        if(address_region_start>=ad_target) return false;
         for(int i=0;i<n_ignore;i++){
-            if(address_region_start==*(ad_ignore_p+i*4)){
-                goto con;
-            }
+            if(address_region_start==*(ad_ignore_p+i*4)) goto con;
         }
         for(long ad=address_region_start;ad+4<address_region_start+size;ad+=4){
             int32_t ins=*(int32_t*)ad;
@@ -277,20 +264,16 @@ static long find_adrp_add_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
         con:
         address_region_start+=size;
     }
-
     return false;
 }
+
 static long find_adrp_str_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ignore){
     mach_vm_offset_t address_region_start=0;
     mach_vm_size_t size=0;
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
-        if(address_region_start>=ad_target){
-            return false;
-        }
+        if(address_region_start>=ad_target) return false;
         for(int i=0;i<n_ignore;i++){
-            if(address_region_start==*(ad_ignore_p+i*4)){
-                goto con;
-            }
+            if(address_region_start==*(ad_ignore_p+i*4)) goto con;
         }
         for(long ad=address_region_start;ad+4<address_region_start+size;ad+=4){
             int32_t ins=*(int32_t*)ad;
@@ -303,9 +286,9 @@ static long find_adrp_str_ref_to_ad(long ad_target, long *ad_ignore_p, int n_ign
         con:
         address_region_start+=size;
     }
-
     return false;
 }
+
 static long find_ref_to_str(const char *str, long ad_start, long ad_end){
     mach_vm_offset_t address_region_start=ad_start;
     mach_vm_size_t size=0;
@@ -313,9 +296,7 @@ static long find_ref_to_str(const char *str, long ad_start, long ad_end){
     NSLog(@"finding: %s %p",str, str);
     while(get_region_address_and_size(&address_region_start,&size)==KERN_SUCCESS){
         for(long ad=address_region_start;ad<address_region_start+size;ad++){
-            if(ad>=ad_end){
-                return false;
-            }
+            if(ad>=ad_end) return false;
             if(*(const char*)ad != first) continue;
             if(!strcmp((const char*)(ad),str)) {
                 NSLog(@"candidate: 0x%lx",ad-aslr);
@@ -342,7 +323,6 @@ static long find_ad_set_targetFrameRate_from_ref(long ad_ref){
         ad_set_targetFrameRate=get_b_address(ins,ad_set_targetFrameRate);
         NSLog(@"ad_set_targetFrameRate: 0x%lx",ad_set_targetFrameRate-aslr);
     }
-
     return ad_set_targetFrameRate;
 }
 
@@ -410,7 +390,6 @@ static void buildHook(){
     NSLog(@"hook setTargetFrameRate start");
     %init(unity,setTargetFrameRate=(void*)ad_set_targetFrameRate);
     NSLog(@"hook setTargetFrameRate success");
-
 }
 
 static void loadFrameWork(){
@@ -474,6 +453,7 @@ static void loadPref(){
         lastAppliedFps = customFps;
     }
 }
+
 static BOOL isEnabledApp(){
     NSMutableDictionary *prefs = loadPrefDict();
     enabled = prefs[@"enabled"] ? [prefs[@"enabled"] boolValue] : YES;
@@ -481,13 +461,25 @@ static BOOL isEnabledApp(){
 
     NSString* bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
     
-    // Chặn toàn bộ app Apple & SpringBoard (Màn hình chính)
     if (!bundleIdentifier || [bundleIdentifier hasPrefix:@"com.apple"]) {
         return NO;
     }
     
-    // Cho phép tất cả App / Game tải từ App Store
     return YES;
+}
+
+// [THÊM ĐÚNG HÀM NÀY VÀO ĐÂY ĐỂ FIX LỖI KHAI BÁO]
+static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
+    NSString *unityPath = [NSString stringWithFormat:@"%@/Frameworks/UnityFramework.framework", [[NSBundle mainBundle] bundlePath]];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:unityPath]) {
+        loadFrameWork();
+        buildHook();
+    }
+    
+    if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
+        (void)(orig_t)orig_setTargetFrameRate(customFps);
+        lastAppliedFps = customFps;
+    }
 }
 
 #pragma mark ctor
