@@ -140,7 +140,7 @@ static kern_return_t get_region_address_and_size(mach_vm_offset_t *address_p, ma
     }
     // [FIX] free the buffer we just read, otherwise it leaks on every region scan
     if (buffer && bufferSize) {
-        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)buffer, bufferSize);
+      vm_deallocate(mach_task_self(), (vm_address_t)buffer, bufferSize);
     }
     return ret;
 }
