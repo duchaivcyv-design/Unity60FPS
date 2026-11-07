@@ -28,7 +28,9 @@ extern UIApplication *UIApp;
     if (!UIApp || !urlString) return;
     NSURL *url = [NSURL URLWithString:urlString];
     if (!url) return;
-    [UIApp openURL:url];
+    
+    // [FIX] Thay thế hàm openURL: cũ (đã bị deprecated) bằng hàm mới
+    [UIApp openURL:url options:@{} completionHandler:nil];
 }
 
 - (BOOL)_canOpenURLString:(NSString *)urlString {
