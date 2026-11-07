@@ -475,24 +475,19 @@ static void loadPref(){
     }
 }
 static BOOL isEnabledApp(){
-    NSString* bundleIdentifier=[[NSBundle mainBundle] bundleIdentifier];
     NSMutableDictionary *prefs = loadPrefDict();
-    enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
+    enabled = prefs[@"enabled"] ? [prefs[@"enabled"] boolValue] : YES;
     if(!enabled) return NO;
-    return [prefs[@"apps"] containsObject:bundleIdentifier];
-}
 
-static void UIApplicationDidFinishLaunching(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
-    NSString *unityPath = [NSString stringWithFormat:@"%@/Frameworks/UnityFramework.framework", [[NSBundle mainBundle] bundlePath]];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:unityPath]) {
-        loadFrameWork();
-        buildHook();
+    NSString* bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+    
+    // Chặn toàn bộ app Apple & SpringBoard (Màn hình chính)
+    if (!bundleIdentifier || [bundleIdentifier hasPrefix:@"com.apple"]) {
+        return NO;
     }
     
-    if(orig_setTargetFrameRate && customFps != lastAppliedFps) {
-        (void)(orig_t)orig_setTargetFrameRate(customFps);
-        lastAppliedFps = customFps;
-    }
+    // Cho phép tất cả App / Game tải từ App Store
+    return YES;
 }
 
 #pragma mark ctor
