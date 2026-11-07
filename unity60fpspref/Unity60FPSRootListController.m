@@ -9,8 +9,10 @@
 - (NSString *)prefsPathForSpecifier:(PSSpecifier *)specifier {
     NSString *defaults = specifier.properties[@"defaults"];
     if (!defaults) return nil;
-    // [FIX] ROOT_PATH_NS() chạy đúng trên cả 3 scheme (rootful/rootless/roothide)
-    return ROOT_PATH_NS([NSString stringWithFormat:@"/var/mobile/Library/Preferences/%@.plist", defaults]);
+    
+    // [FIX] Tách chuỗi ra biến trước để tránh lỗi macro nhận nhầm dấu phẩy làm tham số
+    NSString *unrootedPath = [NSString stringWithFormat:@"/var/mobile/Library/Preferences/%@.plist", defaults];
+    return ROOT_PATH_NS(unrootedPath);
 }
 
 - (NSArray *)specifiers {
